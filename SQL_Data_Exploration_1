@@ -1,0 +1,308 @@
+-------------------------------------------------------------
+-- Looking at covid_death data
+-------------------------------------------------------------
+SELECT
+* 
+FROM covid_deaths
+ORDER BY 
+	covid_deaths.location,
+	covid_deaths.date;
+-------------------------------------------------------------
+-- Looking at covid_vaccination data
+-------------------------------------------------------------
+SELECT
+* 
+FROM covid_vaccinations
+ORDER BY 
+	covid_vaccinations.location,
+	covid_vaccinations.date;
+-------------------------------------------------------------
+-- Select data we will be exploring more in depth
+-------------------------------------------------------------
+SELECT
+	cd.location,
+	cd.date,
+	cd.population,
+	cd.total_cases,
+	cd.new_cases,
+	cd.total_deaths
+FROM
+covid_deaths as cd
+ORDER BY
+	cd.location,
+	cd.date;
+-------------------------------------------------------------
+-- Examine total deaths compared to total population (mortality rate)
+-- Show likelyhood of dying from COVID in the US.
+-------------------------------------------------------------	
+SELECT
+	cd.location,
+	cd.date,
+	cd.total_cases,
+	cd.total_deaths,
+	(CAST(cd.total_deaths AS numeric)/ cd.total_cases) * 100 as mortality_percent
+FROM
+covid_deaths as cd
+WHERE
+cd.population <> 0 AND 
+cd.location LIKE '%States%'
+ORDER BY
+	cd.location,
+	cd.date
+
+-------------------------------------------------------------
+-- Look at total cases vs population; infection rate
+-- shows infection rate in the US
+-------------------------------------------------------------
+SELECT
+	cd.location,
+	cd.date,
+	cd.total_cases,
+	cd.population,
+	(CAST(cd.total_cases as numeric) / cd.population ) * 100 as infection_rate
+FROM covid_deaths as cd
+WHERE
+	cd.population <> 0 AND 
+	cd.location LIKE '%States%'
+GROUP BY 
+	cd.location,
+	cd.date,
+	cd.total_cases,
+	cd.population;
+	
+-------------------------------------------------------------
+-- Find what countries have the highest infection rate.
+-------------------------------------------------------------
+SELECT
+	cd.location,
+	MAX(cd.total_cases) AS highest_infection_count,
+	cd.population,
+	(CAST(MAX(cd.total_cases) as numeric) / cd.population ) * 100 as max_infection_rate
+FROM covid_deaths as cd
+WHERE
+	cd.population <> 0 
+GROUP BY 
+	cd.location,
+	cd.population
+ORDER BY
+	infection_rate DESC;
+	
+	
+-------------------------------------------------------------
+-- Find what countries have the highest mortality rate.
+-------------------------------------------------------------	
+SELECT
+	cd.location,
+	MAX(cd.total_deaths) AS highest_death_count,
+	cd.population,
+	(CAST(MAX(cd.total_deaths) as numeric) / cd.population ) * 100 as max_mortality_rate
+FROM covid_deaths as cd
+WHERE
+	cd.population <> 0 
+GROUP BY 
+	cd.location,
+	cd.population
+ORDER BY
+	max_mortality_rate DESC;	
+	
+-------------------------------------------------------------
+-- Find highest mortality count for each country. 
+-------------------------------------------------------------		
+SELECT
+	cd.location,
+	MAX(cd.total_deaths) AS highest_death_count
+FROM covid_deaths as cd
+WHERE
+	cd.population <> 0 AND 
+	-- don't include contries with ISO_code the same as continent (don't show whole continent data)
+	-- this is my WHERE cd.continent IS NOT NULL query due to data import and CSV file. 
+	cd.continent NOT IN ('OWID_AFR','OWID_ASI','OWID_EUN','OWID_EUR','OWID_INT','OWID_NAM','OWID_OCE','OWID_SAM','OWID_WRL')
+GROUP BY 
+	cd.location
+ORDER BY
+	highest_death_count DESC;	
+-------------------------------------------------------------
+-- Find highest mortality count for each continent. 
+-------------------------------------------------------------	
+SELECT
+	cd.continent,
+	MAX(cd.total_deaths) AS highest_death_count
+FROM covid_deaths as cd
+WHERE
+	cd.population <> 0 AND 
+	-- only show whole continent data ; we should see 7 continents. 
+	-- this is my WHERE cd.continent IN query due to data import and CSV file. 
+	cd.continent NOT IN ('OWID_AFR','OWID_ASI','OWID_EUN','OWID_EUR','OWID_INT','OWID_NAM','OWID_OCE','OWID_SAM','OWID_WRL')
+GROUP BY 
+	cd.continent
+ORDER BY
+	highest_death_count DESC;	
+
+-------------------------------------------------------------
+--  Global Numbers by date
+-- show how many deaths and cases globally in a day by day basis.
+-------------------------------------------------------------
+SELECT
+	cd.date,
+	SUM(cd.new_cases) as "Total Cases",
+	SUM(cd.new_deaths) as "Total Deaths",
+	-- include global death percentage
+	(CAST(SUM(cd.new_deaths) as numeric) / SUM(cd.new_cases) ) * 100  AS "Global Mortality Rate"
+FROM covid_deaths as cd
+WHERE 
+	-- Eliminate new_cases that have 0 in the column due to CSV import. 
+	cd.new_cases <> 0 AND
+-- make sure to not include continent data otherwise you will be double dipping. 
+	cd.continent NOT IN ('OWID_AFR','OWID_ASI','OWID_EUN','OWID_EUR','OWID_INT','OWID_NAM','OWID_OCE','OWID_SAM','OWID_WRL')
+GROUP BY
+	cd.date
+ORDER BY 
+	cd.date; -- see data from first records up to current date 
+
+
+-------------------------------------------------------------
+--  View current Global Mortality Rate (~ 2%)
+-------------------------------------------------------------
+SELECT
+	SUM(cd.new_cases) as "Total Cases",
+	SUM(cd.new_deaths) as "Total Deaths",
+	-- include global death percentage
+	(CAST(SUM(cd.new_deaths) as numeric) / SUM(cd.new_cases) ) * 100  AS "Global Mortality Rate"
+FROM covid_deaths as cd
+WHERE 
+	-- Eliminate new_cases that have 0 in the column due to CSV import. 
+	cd.new_cases <> 0 AND
+-- make sure to not include continent data otherwise you will be double dipping. 
+	cd.continent NOT IN ('OWID_AFR','OWID_ASI','OWID_EUN','OWID_EUR','OWID_INT','OWID_NAM','OWID_OCE','OWID_SAM','OWID_WRL');
+
+-------------------------------------------------------------
+--  Join covid_death table with covid_vaccination table
+-------------------------------------------------------------
+SELECT * 
+FROM covid_deaths cd 
+JOIN covid_vaccinations cv
+ON cd.location = cv.location AND cd.date = cv.date;
+-------------------------------------------------------------
+--  Look at countries population on a day by day basis and the new vaccinations
+-------------------------------------------------------------
+SELECT 
+	cd.continent,
+	cd.location,
+	cd.date,
+	cd.population,
+	cv.new_vaccinations
+FROM covid_deaths cd 
+JOIN covid_vaccinations cv
+ON cd.location = cv.location AND cd.date = cv.date
+WHERE 
+	cv.continent NOT IN ('OWID_AFR','OWID_ASI','OWID_EUN','OWID_EUR','OWID_INT','OWID_NAM','OWID_OCE','OWID_SAM','OWID_WRL') AND
+	cd.continent NOT IN ('OWID_AFR','OWID_ASI','OWID_EUN','OWID_EUR','OWID_INT','OWID_NAM','OWID_OCE','OWID_SAM','OWID_WRL')
+ORDER BY
+	cd.location,
+	cd.date;
+-------------------------------------------------------------
+--  Look at countries population on a day by day basis and the new vaccinations displayed in a rolling count. 
+-- POSTGRES partition
+-------------------------------------------------------------
+SELECT 
+	cd.continent,
+	cd.location,
+	cd.date,
+	cd.population,
+	cv.new_vaccinations,
+	SUM(cv.new_vaccinations) OVER (PARTITION BY cd.location ORDER BY cd.location, cd.date) AS Vaccination_Rolling_Count_per_Day
+FROM covid_deaths cd 
+JOIN covid_vaccinations cv
+ON cd.location = cv.location AND cd.date = cv.date
+WHERE 
+	cv.continent NOT IN ('OWID_AFR','OWID_ASI','OWID_EUN','OWID_EUR','OWID_INT','OWID_NAM','OWID_OCE','OWID_SAM','OWID_WRL') AND
+	cd.continent NOT IN ('OWID_AFR','OWID_ASI','OWID_EUN','OWID_EUR','OWID_INT','OWID_NAM','OWID_OCE','OWID_SAM','OWID_WRL')
+ORDER BY
+	cd.location,
+	cd.date;
+
+-------------------------------------------------------------
+--  Use CTE
+-- Here we are using a CTE because we cannot perform further arithmatics on a created column.
+-- By creating a CTE, the column is created and stored in a common table expression letting us use it for further calculations. 
+-------------------------------------------------------------
+WITH population_vs_vaccination (Continent, Location, Date, Population, new_vaccinations, Vaccination_Rolling_Count_per_Day)
+AS
+(SELECT 
+	cd.continent,
+	cd.location,
+	cd.date,
+	cd.population,
+	cv.new_vaccinations,
+	SUM(cv.new_vaccinations) OVER (PARTITION BY cd.location ORDER BY cd.location, cd.date) AS Vaccination_Rolling_Count_per_Day
+FROM covid_deaths cd 
+JOIN covid_vaccinations cv
+ON cd.location = cv.location AND cd.date = cv.date
+WHERE 
+	cv.continent NOT IN ('OWID_AFR','OWID_ASI','OWID_EUN','OWID_EUR','OWID_INT','OWID_NAM','OWID_OCE','OWID_SAM','OWID_WRL') AND
+	cd.continent NOT IN ('OWID_AFR','OWID_ASI','OWID_EUN','OWID_EUR','OWID_INT','OWID_NAM','OWID_OCE','OWID_SAM','OWID_WRL')
+ )
+SELECT *, (Vaccination_Rolling_Count_per_Day / Population) * 100 as Rolling_vaccination_percentage 
+FROM population_vs_vaccination
+WHERE 
+	Population <> 0;
+
+-------------------------------------------------------------
+-- Temp Table 
+-------------------------------------------------------------
+DROP TABLE IF EXISTS percent_pop_vaccinated -- This statement let's you make changed and implement them to the temp table 
+											-- without having to create a new table and re-writting the columns and INSERT statement. 
+CREATE TEMPORARY TABLE percent_pop_vaccinated
+(
+	Continent varchar(225),
+	Location varchar(225),
+	date Date,
+	Population BIGINT,
+	New_Vaccinations BIGINT,
+	Vaccination_Rolling_Count_per_Day FLOAT
+	
+);
+INSERT INTO percent_pop_vaccinated
+SELECT 
+	cd.continent,
+	cd.location,
+	cd.date,
+	cd.population,
+	cv.new_vaccinations,
+	SUM(cv.new_vaccinations) OVER (PARTITION BY cd.location ORDER BY cd.location, cd.date) AS Vaccination_Rolling_Count_per_Day
+FROM covid_deaths cd 
+JOIN covid_vaccinations cv
+ON cd.location = cv.location AND cd.date = cv.date
+WHERE 
+	cv.continent NOT IN ('OWID_AFR','OWID_ASI','OWID_EUN','OWID_EUR','OWID_INT','OWID_NAM','OWID_OCE','OWID_SAM','OWID_WRL') AND
+	cd.continent NOT IN ('OWID_AFR','OWID_ASI','OWID_EUN','OWID_EUR','OWID_INT','OWID_NAM','OWID_OCE','OWID_SAM','OWID_WRL');
+
+SELECT *,(Vaccination_Rolling_Count_per_Day / Population) * 100 as Rolling_vaccination_percentage 
+FROM percent_pop_vaccinated
+WHERE population <> 0 ;
+
+-------------------------------------------------------------
+-- Creating View to store data for visualization  
+-------------------------------------------------------------
+
+CREATE VIEW percent_population_vaccinated AS
+SELECT 
+	cd.continent,
+	cd.location,
+	cd.date,
+	cd.population,
+	cv.new_vaccinations,
+	SUM(cv.new_vaccinations) OVER (PARTITION BY cd.location ORDER BY cd.location, cd.date) AS Vaccination_Rolling_Count_per_Day
+FROM covid_deaths cd 
+JOIN covid_vaccinations cv
+ON cd.location = cv.location AND cd.date = cv.date
+WHERE 
+	cv.continent NOT IN ('OWID_AFR','OWID_ASI','OWID_EUN','OWID_EUR','OWID_INT','OWID_NAM','OWID_OCE','OWID_SAM','OWID_WRL') AND
+	cd.continent NOT IN ('OWID_AFR','OWID_ASI','OWID_EUN','OWID_EUR','OWID_INT','OWID_NAM','OWID_OCE','OWID_SAM','OWID_WRL');
+
+
+
+
+
+
+	
