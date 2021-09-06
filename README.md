@@ -16,7 +16,7 @@ Due to the import of a CSV into Postres using pgAdmin, NULL values have been con
 For example, The North America Continent Data represent Greenland, Canada, USA and Mexico aggregated but when looking on an individual Country level, Continent data should be ommited by use of WHERE clause.
 <br>
 <br>
-The Tableau Tables and dashboard were created using Tableau Public. SQL queries can be found [here](https://github.com/Jose-Servin/PortfolioProjects/blob/main/Tableau_Queries). The final presentation focuses
+[The Tableau Tables and dashboard](https://public.tableau.com/app/profile/jose.servin/viz/COVIDDashboard_16309572414230/Dashboard1?publish=yes) were created using Tableau Public. SQL queries can be found [here](https://github.com/Jose-Servin/PortfolioProjects/blob/main/Tableau_Queries). The final presentation focuses
 on The United States, The United Kingdom, India, China and Mexico but different selections are possible. 
 <br>
 <br>
