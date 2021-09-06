@@ -1,0 +1,75 @@
+-------------------------------------------------------------
+-- Tableau Queries
+-------------------------------------------------------------
+
+-- 1. 
+-------------------------------------------------------------
+--  View current Global Mortality Rate (~ 2%)
+-------------------------------------------------------------
+SELECT
+	SUM(cd.new_cases) as "Total Cases",
+	SUM(cd.new_deaths) as "Total Deaths",
+	-- include global death percentage
+	(CAST(SUM(cd.new_deaths) as numeric) / SUM(cd.new_cases) ) * 100  AS "Global Mortality Rate"
+FROM covid_deaths as cd
+WHERE 
+	-- Eliminate new_cases that have 0 in the column due to CSV import. 
+	cd.new_cases <> 0 AND
+-- make sure to not include continent data otherwise you will be double dipping. 
+	cd.continent NOT IN ('OWID_AFR','OWID_ASI','OWID_EUN','OWID_EUR','OWID_INT','OWID_NAM','OWID_OCE','OWID_SAM','OWID_WRL');
+
+-- 2. 
+-------------------------------------------------------------
+--  View death count by individual continent
+-------------------------------------------------------------
+SELECT 
+	location, 
+	SUM(new_deaths) AS total_death_count
+FROM covid_deaths
+WHERE 
+	continent IN ('OWID_AFR','OWID_ASI','OWID_EUN','OWID_EUR','OWID_INT','OWID_NAM','OWID_OCE','OWID_SAM','OWID_WRL') AND 
+	location NOT IN ('World', 'European Union', 'International')
+GROUP BY location
+ORDER BY total_death_count DESC;
+
+-- 3. 
+-------------------------------------------------------------
+--  Max infection percentage by country,
+--  Comparing max cases to total population 
+-------------------------------------------------------------
+SELECT 
+	Location, 
+	Population, 
+	MAX(total_cases) AS Highest_Infection_Count,  
+	MAX(CAST (total_cases AS NUMERIC) /population)*100 AS Percent_Population_Infected
+FROM covid_deaths
+WHERE 
+	population <> 0 AND
+	continent NOT IN ('OWID_AFR','OWID_ASI','OWID_EUN','OWID_EUR','OWID_INT','OWID_NAM','OWID_OCE','OWID_SAM','OWID_WRL')
+GROUP BY 
+	location, 
+	Population
+ORDER BY Percent_Population_Infected DESC;
+
+
+-- 4. 
+-------------------------------------------------------------
+--  Max infection percentage by country on a day to day basis 
+-------------------------------------------------------------
+SELECT 
+	Location, 
+	Population,
+	date, 
+	MAX(total_cases) AS Highest_Infection_Count, 
+	MAX(CAST (total_cases AS NUMERIC) /population)*100 AS Percent_Population_Infected
+FROM covid_deaths
+WHERE 
+	population <> 0 AND
+	continent NOT IN ('OWID_AFR','OWID_ASI','OWID_EUN','OWID_EUR','OWID_INT','OWID_NAM','OWID_OCE','OWID_SAM','OWID_WRL')
+GROUP BY
+	Location, 
+	Population, 
+	date
+ORDER BY Percent_Population_Infected DESC;
+
+
